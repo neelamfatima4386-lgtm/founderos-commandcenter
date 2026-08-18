@@ -51,6 +51,7 @@ function DailyMissionPage() {
   const { data: followUps = [] } = useFollowUps();
   const { data: goal } = useDailyGoal(user?.id);
   const goalUpsert = useUpsert("daily_goals", "Targets saved");
+  const taskUpsert = useUpsert("tasks", "Task updated");
 
   const [targets, setTargets] = useState({
     leads: goal?.leads_target ?? 10,
@@ -97,9 +98,7 @@ function DailyMissionPage() {
 
   async function completeTask(taskId: string, title: string) {
     if (!user) return;
-    // Using the upsert via the tasks table
-    const { supabase } = await import("@/integrations/supabase/client");
-    await supabase.from("tasks").update({ status: "completed", completed_at: new Date().toISOString() }).eq("id", taskId);
+    await taskUpsert.mutateAsync({ id: taskId, status: "completed", completed_at: new Date().toISOString() });
     await logActivity({
       entity_type: "task",
       entity_id: taskId,
@@ -107,8 +106,6 @@ function DailyMissionPage() {
       description: `${profile?.full_name ?? "Someone"} completed "${title}"`,
     });
     toast.success("Task completed");
-    // Invalidate queries
-    const { useQueryClient } = await import("@tanstack/react-query");
   }
 
   return (
